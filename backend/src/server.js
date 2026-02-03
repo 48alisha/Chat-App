@@ -13,10 +13,9 @@ const PORT = process.env.PORT;
 app.use(express.json()); //req.body
 
 app.use("/api/auth", authRoutes);
-app.use("/api/messages",messagedRoutes);
+app.use("/api/messages", messagedRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   connectDb();
 });
- 
