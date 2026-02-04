@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utilis.js";
 import { sendWelcomeEmail } from "../emails/emailHandlers.js";
 import dotenv from "dotenv";
+import cloudinary from "../lib/cloudinary.js";
 
 dotenv.config();
 
@@ -64,5 +65,60 @@ export const signup = async (req, res) => {
   } catch (err) {
     console.error("Error during signup:", err);
     res.status(500).json({ message: " Internal Server Error" });
+  }
+};
+
+export const login = async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.staus(400).json({ message: "Fields are required" });
+  }
+
+  try {
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      return res.staus(400).json({ message: "Inavlid Credentials " });
+    }
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      return res.status(400).json({ message: "Invalid Credentials" });
+    }
+
+    generateToken(user._id, res);
+
+    res.status(200).json({
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      profile: user.profile,
+    });
+  } catch (error) {
+    console.error("Error in login controller", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+export const logout = (_, res) => {
+  res.cookie("jwt", "", { maxAge: 0 });
+  res.status(200).json({ message: "Logout Successfully" });
+};
+
+export const updateprofile = async (req, res) => {
+  try {
+    const { profile } = req.body.profile;
+    if (!profile) {
+      return res.status(400).json({ message: "Profile Pic is required" });
+    }
+    const userId = req.user._id;
+    const uploadResponse = await cloudinary.uplooad(profile);
+    const updatedUser = await User.findById(
+      userId,
+      { profile: uploadResponse.secure_url },
+      { new: true },
+    );
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.log("Error in update profile:", error);
+    res.staus(500).json({ message: "Internal server error" });
   }
 };
